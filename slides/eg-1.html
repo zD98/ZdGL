@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Shader & Texture</title>
+    <script src="../build/three.js"></script>
+
+    <style>
+        #container{width: 500px;height: 500px;}
+    </style>
+</head>
+<body>
+<div id="container">
+
+</div>
+
+<script id="fragmentShader" type="x-shader/x-fragment">
+    uniform float time;
+
+    uniform sampler2D texture1;
+    uniform sampler2D texture2;
+
+    varying vec2 texCoord;
+
+    void main(void){
+        vec4 noise = texture2D(texture1,texCoord);
+
+        vec2 T1 = texCoord +vec2(1.5, -1.5) * time * 0.01;
+        vec2 T2 = texCoord + vec2(-0.5, 2.0) *time * 0.01;
+
+        T1.x -= noise.r*2.0;
+        T1.y += noise.g*4.0;
+        T2.x += noise.g*0.2;
+        T2.y += noise.b*0.2;
+        float p = texture2D(texture1, T1*2.0).a + 0.25;
+
+        vec4 color = texture2D(texture2,T2);
+        vec4 temp = color * 2.0 * (vec4(p,p,p,p))+(color * color);
+        gl_FragColor = temp;
+
+    }
+</script>
+<script id="vertexShader" type="x-shader/x-vertex">
+    varying vec2 texCoord;
+    uniform sampler2D texture1;
+    uniform sampler2D texture2;
+    void main(){
+        texCoord = uv;
+        vec4 mvPosition = modelViewMatrix *vec4(position,1.0);
+        gl_Position = projectionMatrix * mvPosition;
+    }
+</script>
+
+<script>
+
+    var container=document.getElementById('container');
+
+    var renderer = new THREE.WebGLRenderer( { antialias: true} );
+    renderer.setSize(container.offsetWidth, container.offsetHeight);
+    container.appendChild( renderer.domElement );
+
+    // Create a new Three.js scene
+    var scene = new THREE.Scene();
+    scene.add(new THREE.AmbientLight(0x505050));
+    // Put in a camera at a good default location
+    var camera = new THREE.PerspectiveCamera( 45, container.offsetWidth / container.offsetHeight, 1, 10000 );
+    camera.position.set( 0, 0, 3.3333 );
+
+    var sunGroup = new THREE.Object3D();
+
+    var SUNMAP = "images/lavatile.jpg";
+    var NOISEMAP = "./images/cloud.png";
+
+    var uniforms = {
+        time:{type:"f",value:1.0},
+        texture1:{type:"t",value:THREE.ImageUtils.loadTexture(NOISEMAP)},
+        texture2:{type:"t",value:THREE.ImageUtils.loadTexture(SUNMAP)}
+    };
+    //uniforms.texture1.value.wrapS=uniforms.texture1.value.wrapT=THREE.RepeatWrapping;
+    //uniforms.texture2.value.wrapS=uniforms.texture2.value.wrapT=THREE.RepeatWrapping;
+
+    var material = new THREE.ShaderMaterial({
+        uniforms:uniforms,
+        vertexShader:document.getElementById('vertexShader').textContent,
+        fragmentShader:document.getElementById('fragmentShader').textContent
+    });
+
+    var geometry = new THREE.SphereGeometry(1,32,32);
+    var sunMesh = new THREE.Mesh(geometry,material);
+
+    var clock = new THREE.Clock();
+
+
+    var light = new THREE.PointLight(0xffffff,1.2,100000);
+
+    sunGroup.add(sunMesh);
+    sunGroup.add(light);
+
+    scene.add(sunGroup);
+
+
+    renderer.render(scene,camera);
+
+    function run(){
+        var delta = clock.getDelta();
+        uniforms.time.value +=delta;
+
+        sunMesh.rotation.y -=0.005;
+
+        renderer.render(scene,camera);
+        requestAnimationFrame(run);
+    }
+
+    run();
+</script>
+</body>
+</html>

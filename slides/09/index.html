@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title></title>
+    <title>绘制3D物体</title>
     <style>
         #container{width: 800px;height: 600px;}
     </style>
@@ -104,10 +104,6 @@
             0,1,2
     ];
     gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices),gl.STATIC_DRAW);
-
-
-
-
 
     gl.drawElements(gl.TRIANGLES,12,gl.UNSIGNED_SHORT,0);
     //type,start,num

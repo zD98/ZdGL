@@ -64,8 +64,9 @@
     gl.useProgram(program);
 
     var vertices = [
-        -1,-1,0,0,1,0,1,-1,0];
-
+        -1,-1,1,
+        0,1,1,
+        1,-1,1];
     var squareVerticesBuffer = gl.createBuffer();
     gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);

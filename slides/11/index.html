@@ -16,9 +16,9 @@
 <script src="../js/Camera.js"></script>
 <script id="vertexShader" type="x-shader/x-vertex">
   attribute vec3 aVertexPosition;
-  uniform mat4 perspectiveProject;
+  uniform mat4 MVPMatrix;
   void main(void) {
-    gl_Position = perspectiveProject*vec4(aVertexPosition,1.0);
+    gl_Position = MVPMatrix*vec4(aVertexPosition,1.0);
   }
 
 </script>
@@ -107,9 +107,9 @@
     matrix = Matrix.transform(matrix);
     project = Matrix.transform(project);
 
-    var perspectiveProjectLocation = gl.getUniformLocation(program,"perspectiveProject");
-    gl.enableVertexAttribArray(perspectiveProjectLocation);
-    gl.uniformMatrix4fv(perspectiveProjectLocation,0,matrix);
+    var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
+    gl.enableVertexAttribArray(MVPMatrixLocation);
+    gl.uniformMatrix4fv(MVPMatrixLocation,0,matrix);
 
 
 

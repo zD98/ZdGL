@@ -13,6 +13,7 @@ Vector.prototype.normalize = function(){
   this.x = x/len;
   this.y = y/len;
   this.z = z/len;
+  return this;
 };
 
 Vector.prototype.cross = function(vector){
@@ -41,4 +42,19 @@ Vector.prototype.add = function (vector) {
   nV.y = this.y - vector.y;
   nV.z = this.z - vector.z;
   return nV;
+};
+Vector.prototype.arraylize = function(){
+  return [this.x,this.y,this.z];
+};
+
+Vector.toArray = function(){
+  var result = [];
+
+  for(var i = 0,len = arguments.length;i<len;i++){
+    if(arguments[i] instanceof Vector){
+      var a = arguments[i].arraylize();
+      result = result.concat(a);
+    }
+  }
+  return result;
 };

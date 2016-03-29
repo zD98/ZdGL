@@ -17,54 +17,24 @@
 <script id="vertexShader" type="x-shader/x-vertex">
 
   attribute vec3 aVertexPosition;
-  attribute vec3 vertexNormal;
   attribute vec4 vColor;
   uniform mat4 MVPMatrix;
-  varying vec3 Normal;
   varying vec4 Color;
   void main(void) {
     Color = vColor;
-    Normal = normalize(vertexNormal);
     gl_Position = MVPMatrix*vec4(aVertexPosition,1.0);
   }
 
 </script>
 <script id="fragmentShader" type="x-shader/x-fragment">
     precision mediump float;
-    uniform vec3 Ambient;
-    uniform vec3 LightDirection;
-    uniform vec3 LightColor;
-    uniform vec3 HalfVector;   //光泽度表面方向
-    uniform float Shininess;   //高光尖锐程度的指数值
-    uniform float Strength;    //用于调整光泽度的数据
-    varying vec3 Normal;
     varying vec4 Color;
     void main(){
-    //输出的是绝对位置！
-        float diffuse = max(0.0, dot(Normal, LightDirection));
-        float specular = max(0.0, dot(Normal, HalfVector));
-
-        if( diffuse == 0.0){
-            specular =0.0;
-        }else{
-            specular = pow(specular,Shininess);
-        }
-        vec3 scatteredLight = Ambient + LightColor*diffuse;
-        vec3 reflectedLight = LightColor * specular*Strength;
-
-        vec3 rgb = min(Color.rgb*scatteredLight + reflectedLight, vec3(1.0));
-        gl_FragColor = vec4(rgb,Color.a);
-
-        if(Normal.y == 0.0){
           gl_FragColor = Color;
-        }
-
     }
 </script>
 
 <script>
-
-
     var canvas = document.getElementById('canvas');
     canvas.width = 400;
     canvas.height = 300;
@@ -75,6 +45,8 @@
     // Near things obscure far things
     gl.depthFunc(gl.LEQUAL);
     // Clear the color as well as the depth buffer.
+    //gl.enable(gl.CULL_FACE);
+
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 
@@ -92,54 +64,21 @@
     }
     gl.useProgram(program);
 
-
-    var v1 = new Vector(0,-1,4);
-    var v2 = new Vector(1,0,2);
-    var v3 = new Vector(-1,0,2);
-    var v4 = new Vector(0,2,2);
-
-    var f1 = generateNormal(v4,v3,v1);
-    var f2 = generateNormal(v2,v4,v1);
-    var f3 = generateNormal(v3,v4,v2);
-    var f4 = generateNormal(v1,v2,v3);
-    var n1 = f1.add(f2).add(f4);
-    var n2 = f2.add(f3).add(f4);
-    var n3 = f1.add(f3).add(f4);
-    var n4 = f1.add(f2).add(f3);
-
-    var vertices =  Vector.toArray(v1,v2,v3,v4);
-    var normals =Vector.toArray(n1,n2,n3,n4);
-    var indices = [
-        3,2,0,
-        1,3,0,
-        2,3,1,
-        0,1,2
-    ];
-    var colors = [
-            1,0,0,1,
-            0,1,0,1,
-            0,0,1,1,
-            .3,.3,.3,.5
-    ];
+    var v = torus(32,32,1.0,2.0);
     var vbos = [],attL = [],attS = [];
-    vbos[0] = createVBO(gl,vertices);
+    vbos[0] = createVBO(gl,v[0]);
     attL[0] = gl.getAttribLocation(program, "aVertexPosition");
     attS[0] = 3;
-
-    vbos[1] = createVBO(gl,normals);
-    attL[1] = gl.getAttribLocation(program, "vertexNormal");
-    attS[1] = 3;
-
-    vbos[2] = createVBO(gl,colors);
-    attL[2] = gl.getAttribLocation(program, "vColor");
-    attS[2] = 4;
-
+    vbos[1] = createVBO(gl,v[1]);
+    attL[1] = gl.getAttribLocation(program, "vColor");
+    attS[1] = 4;
     setAttribute(gl,vbos,attL,attS);
 
-    var project = setPerspectiveProj(Math.PI/2,400,300,1,1000);
-    var eye = new Vector(0,0,5);
+
+    var project = setPerspectiveProj(Math.PI/2,400,300,0.1,100);
+    var eye = new Vector(0,0,20);
     var center = new Vector(0,0,0);
-    var up = new Vector(0,.5,0);
+    var up = new Vector(0,1,0);
     var view = camera.setCamera(eye,center,up);
     var matrix = Matrix.cross(project,view);
     matrix = Matrix.transform(matrix);
@@ -149,23 +88,11 @@
     gl.uniformMatrix4fv(MVPMatrixLocation,0,matrix);
 
 
-    var LightDirection  = gl.getUniformLocation(program,"LightDirection");
-    gl.uniform3fv(LightDirection,[5,-5,-5]);
-    var LightColor  = gl.getUniformLocation(program,"LightColor");
-    gl.uniform3fv(LightColor,[0.2,.2,.2]);
-    var HalfVector = gl.getUniformLocation(program,"HalfVector");
-    gl.uniform3fv(HalfVector,[.5,.5,.5]);
-    var Shininess = gl.getUniformLocation(program,"Shininess");
-    gl.uniform1f(Shininess,20);
-    var Strength = gl.getUniformLocation(program,"Strength");
-    gl.uniform1f(Strength,10);
-    var Ambient = gl.getUniformLocation(program,"Ambient");
-    gl.uniform3fv(Ambient,[.2,.2,.2]);
-
-
-    var ibo = createIBO(gl,indices);
+    var ibo = createIBO(gl,v[2]);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ibo);
     gl.drawElements(gl.TRIANGLES,12,gl.UNSIGNED_SHORT,0);
+
+
     var error = gl.getError();
     while(error){
         console.log(error);
@@ -188,7 +115,7 @@
         matrix[11] = b;
         return matrix;
     }
-//    面法向量  不完善
+    //    面法向量  不完善
     function generateNormal(v1,v2,v3){
         var b = v1.sub(v2);
         var a = v1.sub(v3);
@@ -227,6 +154,55 @@
             gl.vertexAttribPointer(attL[i],attS[i],gl.FLOAT,false,0,0);
         }
     }
+
+    function hsva(h,s,v,a){
+        if(s>1||v>1||a>1){
+            return ;
+        }
+        var th = h%360;
+        var i = Math.floor(th/60);
+        var  f = th /60 -i;
+        var m = v*(1-s);
+        var n = v*(1-s*f);
+        var k = v*(1-s*(1-f));
+        var color = [];
+        if(!s>0&&!s<0){
+            color.push(v,v,v,a);
+        }else{
+            var r = [v, n, m, m, k, v];
+            var g = [k, v, v, n, m, m];
+            var b = [m, m, k, v, v, n];
+            color.push(r[i], g[i], b[i], a);
+        }
+        return color;
+    }
+
+    function torus(row, column, irad, orad){
+        var pos =[], col = [], idx = [];
+        for(var i = 0; i <= row; i++){
+            var r = Math.PI * 2 / row * i;
+            var rr = Math.cos(r);
+            var ry = Math.sin(r);
+            for(var ii = 0; ii <= column; ii++){
+                var tr = Math.PI * 2 / column * ii;
+                var tx = (rr * irad + orad) * Math.cos(tr);
+                var ty = ry * irad;
+                var tz = (rr * irad + orad) * Math.sin(tr);
+                pos.push(tx, ty, tz);
+                var tc = hsva(360 / column * ii, 1, 1, 1);
+                col.push(tc[0], tc[1], tc[2], tc[3]);
+            }
+        }
+        for(i = 0; i < row; i++){
+            for(ii = 0; ii < column; ii++){
+                r = (column + 1) * i + ii;
+                idx.push(r, r + column + 1, r + 1);
+                idx.push(r + column + 1, r + column + 2, r + 1);
+            }
+        }
+        return [pos, col, idx];
+    }
+
 </script>
 <script></script>
 </body>

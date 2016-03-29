@@ -74,9 +74,17 @@
     attS[1] = 4;
     setAttribute(gl,vbos,attL,attS);
 
+//        var v = circle(32);
+//        var vbos = [],attL = [],attS = [];
+//        vbos[0] = createVBO(gl,v[0]);
+//        attL[0] = gl.getAttribLocation(program, "aVertexPosition");
+//        attS[0] = 3;
+//        setAttribute(gl,vbos,attL,attS);
+
+    console.log(v);
 
     var project = setPerspectiveProj(Math.PI/2,400,300,0.1,100);
-    var eye = new Vector(0,0,20);
+    var eye = new Vector(0,4,2);
     var center = new Vector(0,0,0);
     var up = new Vector(0,1,0);
     var view = camera.setCamera(eye,center,up);
@@ -90,7 +98,7 @@
 
     var ibo = createIBO(gl,v[2]);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ibo);
-    gl.drawElements(gl.TRIANGLES,12,gl.UNSIGNED_SHORT,0);
+    gl.drawElements(gl.TRIANGLES,6144,gl.UNSIGNED_SHORT,0);
 
 
     var error = gl.getError();
@@ -202,7 +210,25 @@
         }
         return [pos, col, idx];
     }
+    function circle (row){
+        var pos = [],inx = [];
+        var R =0.5,r = 0.2;
+        for(var i =0 ;i<=row;i++){
+            var a = Math.PI *2 / row *i;
+            var x1 = R*Math.cos(a);
+            var y1 = R*Math.sin(a);
+            var z = 0;
+            var x2 = r*Math.cos(a);
+            var y2 = r*Math.sin(a);
+            pos.push(x1,y1,z,x2,y2,z);
+        }
 
+        for(var j = 0;j<row*2;j++){
+            inx.push(j,j+1,j+2);
+        }
+
+        return　[pos,inx];
+    }
 </script>
 <script></script>
 </body>

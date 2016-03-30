@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Light</title>
+    <title>Light 全局光</title>
     <style>
         #container{width: 800px;height: 600px;}
     </style>
@@ -24,12 +24,14 @@
   uniform mat4 MVPMatrix;
   uniform mat4 invMatrix;
   uniform vec3 lightDirection;
+  uniform vec4 ambientColor;
   varying vec4 Color;
   void main(void) {
 
     vec3 invLight = normalize(invMatrix*vec4(lightDirection,0.0)).xyz;
-    float diffuse = clamp(dot(vNormal,invLight),0.1,1.0);
-    Color = vColor*vec4(vec3(diffuse),1.0);
+    float diffuse = clamp(dot(vNormal,invLight),0.0,1.0);
+    //限制最大值
+    Color = vColor*vec4(vec3(diffuse),1.0)+ambientColor;
     gl_Position = MVPMatrix*vec4(aVertexPosition,1.0);
   }
 
@@ -96,7 +98,7 @@
     var lightDirectionLocation = gl.getUniformLocation(program, "lightDirection");
     var invMatrixLocation = gl.getUniformLocation(program, "invMatrix");
     var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
-
+    var ambientColorLocation = gl.getUniformLocation(program,"ambientColor");
     //计数  保存模型变换矩阵
     var count  = 0,tempMatrix = [
         1,0,0,0,
@@ -106,7 +108,7 @@
     ];
 
     var lightDirection = [1,1,1];
-
+    var ambientLight = [0.1,0.1,0.1,1.0];
     function render(){
         gl.clearColor(0.0,0.0,0.0,1.0);
         gl.clearDepth(1.0);
@@ -122,7 +124,7 @@
         gl.uniformMatrix4fv(MVPMatrixLocation, false, mvpMatrix);
         gl.uniformMatrix4fv(invMatrixLocation,false,invMatrix);
         gl.uniform3fv(lightDirectionLocation,lightDirection);
-
+        gl.uniform4fv(ambientColorLocation,ambientLight);
         gl.drawElements(gl.TRIANGLES,6144,gl.UNSIGNED_SHORT,0);
         gl.flush();
         requestAnimationFrame(render);

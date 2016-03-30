@@ -16,7 +16,7 @@ function createIBO(gl,data){
   return ibo;
 }
 function createProgram(vs, fs){
-
+  
 }
 function createShader(gl, source, type){
   var shader= gl.createShader(type);

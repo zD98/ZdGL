@@ -14,6 +14,7 @@
 <script src="../js/Matrix.js"></script>
 <script src="../js/Vector.js"></script>
 <script src="../js/Camera.js"></script>
+<script src="../js/generalGeometry.js"></script>
 <script id="vertexShader" type="x-shader/x-vertex">
 
   attribute vec3 aVertexPosition;
@@ -74,7 +75,8 @@
     attS[1] = 4;
     setAttribute(gl,vbos,attL,attS);
 
-//        var v = circle(32);
+//        var v = Sphere(3,32);
+//        console.log(v);
 //        var vbos = [],attL = [],attS = [];
 //        vbos[0] = createVBO(gl,v[0]);
 //        attL[0] = gl.getAttribLocation(program, "aVertexPosition");
@@ -82,7 +84,7 @@
 //        setAttribute(gl,vbos,attL,attS);
 
     var project = setPerspectiveProj(Math.PI/2,400,300,0.1,100);
-    var eye = new Vector(0,7,5);
+    var eye = new Vector(0,0,15);
     var center = new Vector(0,0,0);
     var up = new Vector(0,1,0);
     var view = camera.setCamera(eye,center,up);
@@ -91,8 +93,8 @@
     //pvMatrix = Matrix.transform(pvMatrix);
 
     var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
-    gl.enableVertexAttribArray(MVPMatrixLocation);
-    gl.uniformMatrix4fv(MVPMatrixLocation,0,pvMatrix);
+    //gl.enableVertexAttribArray(MVPMatrixLocation);
+    //gl.uniformMatrix4fv(MVPMatrixLocation,0,pvMatrix);
 
 
     var ibo = createIBO(gl,v[2]);

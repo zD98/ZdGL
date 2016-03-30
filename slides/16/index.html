@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Light</title>
+    <title>Light 反射 &高氏着色</title>
     <style>
         #container{width: 800px;height: 600px;}
     </style>
@@ -24,12 +24,18 @@
   uniform mat4 MVPMatrix;
   uniform mat4 invMatrix;
   uniform vec3 lightDirection;
+  uniform vec4 ambientColor;
+  uniform vec3 eyeDirection;
   varying vec4 Color;
   void main(void) {
 
     vec3 invLight = normalize(invMatrix*vec4(lightDirection,0.0)).xyz;
+    vec3 invEye = normalize(invMatrix * vec4(eyeDirection,0.0)).xyz;
+    vec3 halfLE = normalize(invLight + invEye);
     float diffuse = clamp(dot(vNormal,invLight),0.1,1.0);
-    Color = vColor*vec4(vec3(diffuse),1.0);
+    float specular = pow(clamp(dot(vNormal,halfLE),0.0,1.0),50.0);
+    vec4 light = vColor * vec4(vec3(diffuse),1.0) + vec4(vec3(specular),1.0);
+    Color = light + ambientColor;
     gl_Position = MVPMatrix*vec4(aVertexPosition,1.0);
   }
 
@@ -72,7 +78,7 @@
     }
     gl.useProgram(program);
 
-    var v = torusN(32,32,1.0,2.0);
+    var v = torusN(4,4,1.0,2.0);
 
     var vbos = [],attL = [],attS = [];
     vbos[0] = createVBO(gl,v[0]);
@@ -88,7 +94,7 @@
 
     var ibo = createIBO(gl,v[3]);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ibo);
-
+    var segNum = v[3].length;
     var project = Matrix.perspective(Math.PI/2,400,300,0.1,100);
     var view = Matrix.lookAt([0,0,10],[0,0,0],[0,1,0]);
     var pvMatrix = Matrix.multiply(project,view);
@@ -96,7 +102,8 @@
     var lightDirectionLocation = gl.getUniformLocation(program, "lightDirection");
     var invMatrixLocation = gl.getUniformLocation(program, "invMatrix");
     var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
-
+    var ambientColorLocation = gl.getUniformLocation(program,"ambientColor");
+    var eyeDirectionLocation = gl.getUniformLocation(program,"eyeDirection");
     //计数  保存模型变换矩阵
     var count  = 0,tempMatrix = [
         1,0,0,0,
@@ -105,8 +112,9 @@
         0,0,0,1
     ];
 
-    var lightDirection = [1,1,1];
-
+    var lightDirection = [-1,1,1];
+    var ambientColor = [0.1,0.1,0.1,1.0];
+    var eyeDirection = [0.0,0.0,10];
     function render(){
         gl.clearColor(0.0,0.0,0.0,1.0);
         gl.clearDepth(1.0);
@@ -122,8 +130,9 @@
         gl.uniformMatrix4fv(MVPMatrixLocation, false, mvpMatrix);
         gl.uniformMatrix4fv(invMatrixLocation,false,invMatrix);
         gl.uniform3fv(lightDirectionLocation,lightDirection);
-
-        gl.drawElements(gl.TRIANGLES,6144,gl.UNSIGNED_SHORT,0);
+        gl.uniform4fv(ambientColorLocation,ambientColor);
+        gl.uniform3fv(eyeDirectionLocation,eyeDirection);
+        gl.drawElements(gl.TRIANGLES,segNum,gl.UNSIGNED_SHORT,0);
         gl.flush();
         requestAnimationFrame(render);
     }

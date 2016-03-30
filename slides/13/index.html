@@ -81,25 +81,49 @@
 //        attS[0] = 3;
 //        setAttribute(gl,vbos,attL,attS);
 
-    console.log(v);
-
     var project = setPerspectiveProj(Math.PI/2,400,300,0.1,100);
-    var eye = new Vector(0,4,2);
+    var eye = new Vector(0,7,5);
     var center = new Vector(0,0,0);
     var up = new Vector(0,1,0);
     var view = camera.setCamera(eye,center,up);
-    var matrix = Matrix.cross(project,view);
-    matrix = Matrix.transform(matrix);
+
+    var pvMatrix = Matrix.cross(project,view);
+    //pvMatrix = Matrix.transform(pvMatrix);
 
     var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
     gl.enableVertexAttribArray(MVPMatrixLocation);
-    gl.uniformMatrix4fv(MVPMatrixLocation,0,matrix);
+    gl.uniformMatrix4fv(MVPMatrixLocation,0,pvMatrix);
 
 
     var ibo = createIBO(gl,v[2]);
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ibo);
-    gl.drawElements(gl.TRIANGLES,6144,gl.UNSIGNED_SHORT,0);
 
+    //计数  保存模型变换矩阵
+    var count  = 0,tempMatrix = [
+            1,0,0,0,
+            0,1,0,0,
+            0,0,1,0,
+            0,0,0,1
+    ];
+    function render(){
+        gl.clearColor(0.0,0.0,0.0,1.0);
+        gl.clearDepth(1.0);
+        gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+        count++;
+        let a = (count%360) *Math.PI /180;
+        let mMatrix = Matrix.rotate(tempMatrix,a,[1,1,0]);
+
+        let mvpMatrix;
+
+        mvpMatrix = Matrix.multiply(pvMatrix,mMatrix);
+        mvpMatrix = Matrix.transform(mvpMatrix);
+        gl.uniformMatrix4fv(MVPMatrixLocation, false, mvpMatrix);
+
+        gl.drawElements(gl.TRIANGLES,6144,gl.UNSIGNED_SHORT,0);
+        gl.flush();
+        requestAnimationFrame(render);
+    }
+    render();
 
     var error = gl.getError();
     while(error){

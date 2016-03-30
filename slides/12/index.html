@@ -41,7 +41,7 @@
     varying vec4 Color;
     void main(){
     //输出的是绝对位置！
-        float diffuse = max(0.0, dot(Normal, LightDirection));
+        float diffuse = clamp( dot(Normal, LightDirection),0.1,1.0);
         float specular = max(0.0, dot(Normal, HalfVector));
 
         if( diffuse == 0.0){
@@ -119,7 +119,7 @@
             1,0,0,1,
             0,1,0,1,
             0,0,1,1,
-            .3,.3,.3,.5
+            1,1,1,1
     ];
     var vbos = [],attL = [],attS = [];
     vbos[0] = createVBO(gl,vertices);
@@ -152,7 +152,7 @@
     var LightDirection  = gl.getUniformLocation(program,"LightDirection");
     gl.uniform3fv(LightDirection,[5,-5,-5]);
     var LightColor  = gl.getUniformLocation(program,"LightColor");
-    gl.uniform3fv(LightColor,[0.2,.2,.2]);
+    gl.uniform3fv(LightColor,[0.5,.5,.5]);
     var HalfVector = gl.getUniformLocation(program,"HalfVector");
     gl.uniform3fv(HalfVector,[.5,.5,.5]);
     var Shininess = gl.getUniformLocation(program,"Shininess");

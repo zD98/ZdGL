@@ -24,7 +24,7 @@ Matrix.prototype.transform = function(){
   ];
 };
 
-Matrix.prototype.translate = function(){
+Matrix.prototype.translate = function(vec3){
   var mat = this.matrix;
   var dist = [];
   for(let i = 0;i<12;i++){
@@ -99,20 +99,19 @@ Matrix.rotate = function(mat, angle, axis){
     a*c*(1-tc)+b*ts,b*c*(1-tc) - a*ts,c*c*(1-tc)+tc,0,
     0,0,0,1
   ];
-  console.log(mat);
   dist = Matrix.multiply(r, mat);
   return dist;
 
 };
 Matrix.translate = function(mat, vec3){
   var dist = [];
-  for(let i = 0;i<12;i++){
+  for(let i = 0;i<16;i++){
     dist[i] = mat[i];
   }
-  dist[12] = mat[0] * vec3[0] + mat[4] * vec3[1] + mat[8]  * vec3[2] + mat[12];
-  dist[13] = mat[1] * vec3[0] + mat[5] * vec3[1] + mat[9]  * vec3[2] + mat[13];
-  dist[14] = mat[2] * vec3[0] + mat[6] * vec3[1] + mat[10] * vec3[2] + mat[14];
-  dist[15] = mat[3] * vec3[0] + mat[7] * vec3[1] + mat[11] * vec3[2] + mat[15];
+  dist[3] =  vec3[0] + mat[12];
+  dist[7] =  vec3[1] + mat[13];
+  dist[11] =  vec3[2] + mat[14];
+  dist[15] = mat[15];
   return dist
 };
 Matrix.lookAt = function(eye, center, up){

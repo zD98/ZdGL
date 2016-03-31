@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Camera</title>
+    <style>
+        #container{width: 800px;height: 600px;}
+    </style>
+</head>
+<body>
+<div id="container">
+    <canvas id="canvas"></canvas>
+</div>
+<script src="../js/Matrix.js"></script>
+<script src="../js/Vector.js"></script>
+<script src="../js/Camera.js"></script>
+<script id="vertexShader" type="x-shader/x-vertex">
+  attribute vec3 aVertexPosition;
+  uniform mat4 MVPMatrix;
+  void main(void) {
+    gl_Position = MVPMatrix*vec4(aVertexPosition,1.0);
+  }
+
+</script>
+<script id="fragmentShader" type="x-shader/x-fragment">
+    precision mediump float;
+    void main(){
+    //输出的是绝对位置！
+        vec4 coord = gl_FragCoord;
+        gl_FragColor = vec4(coord.x/400.0,coord.y/300.0,coord.z/10.0,1.0);
+    }
+</script>
+
+<script>
+    function createShader(gl, source, type){
+        var shader= gl.createShader(type);
+        source = document.getElementById(source).text;
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        return shader;
+    }
+
+    var canvas = document.getElementById('canvas');
+    canvas.width = 400;
+    canvas.height = 300;
+    var gl = canvas.getContext("webgl");
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    // Enable depth testing
+    gl.enable(gl.DEPTH_TEST);
+    // Near things obscure far things
+    gl.depthFunc(gl.LEQUAL);
+    // Clear the color as well as the depth buffer.
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+
+    var vertexShader = createShader(gl,'vertexShader',gl.VERTEX_SHADER);
+    var fragShader = createShader(gl, 'fragmentShader', gl.FRAGMENT_SHADER);
+
+    var program = gl.createProgram();
+
+    gl.attachShader(program,vertexShader);
+    gl.attachShader(program,fragShader);
+
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        alert("Unable to initialize the shader program.");
+    }
+
+    gl.useProgram(program);
+    //世界坐标系
+    var vertices = [
+        0, -1, -4,
+        1, 0, -2,
+        -1, 0,-2,
+        0, 1,-2
+    ];
+
+    var VerticesBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, VerticesBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+    var vertexPositionAttribute = gl.getAttribLocation(program, "aVertexPosition");
+    gl.enableVertexAttribArray(vertexPositionAttribute);
+    gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+
+//    //  矩阵有毒  是按从上到下从左到右填充矩阵
+//    var scale =Math.PI/3;
+//    var matrix = [
+//        1,0,0,0,
+//        0,1,0,0,
+//        0,0,1,0,
+//        0,0,0,1
+//    ];
+//
+//    var gWorldLocation = gl.getUniformLocation(program,'gWorld');
+//    gl.uniformMatrix4fv(gWorldLocation,0,matrix);
+
+
+    var project = setPerspectiveProj(Math.PI/2,400,300,1,1000);
+
+    var eye = new Vector(0,0,-1);
+    var center = new Vector(0,0,-2);
+    var up = new Vector(0,1,0);
+    var view = camera.setCamera(eye,center,up);
+    var matrix = Matrix.cross(project,view);
+    matrix = Matrix.transform(matrix);
+    project = Matrix.transform(project);
+
+    var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
+    gl.enableVertexAttribArray(MVPMatrixLocation);
+    gl.uniformMatrix4fv(MVPMatrixLocation,0,matrix);
+
+
+
+    var vertexIndexBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, vertexIndexBuffer);
+    var indices = [
+        3,2,0,
+        1,3,0,
+        2,3,1,
+        0,1,2
+    ];
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices),gl.STATIC_DRAW);
+
+    gl.drawElements(gl.TRIANGLES,12,gl.UNSIGNED_SHORT,0);
+    var error = gl.getError();
+    while(error){
+        console.log(error);
+        error = gl.getError();
+    }
+    function setPerspectiveProj(a,width,height,nZ,fZ){
+        var matrix = [
+            1,0,0,0,
+            0,1,0,0,
+            0,0,1,0,
+            0,0,1,0];
+        var tana = Math.tan(a/2.0);
+        var ar = width/height;
+        var k = (-nZ-fZ)/(nZ-fZ);
+        var b = (2*fZ*nZ)/(nZ-fZ);
+        matrix[0] = 1/(tana*ar);
+        matrix[5] = 1/tana;
+        matrix[10] = k;
+        matrix[11] = b;
+        return matrix;
+    }
+
+</script>
+<script></script>
+</body>
+</html>

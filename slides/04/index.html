@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+    <style>
+        #container{width: 800px;height: 600px;}
+    </style>
+</head>
+<body>
+<div id="container">
+    <canvas id="canvas"></canvas>
+</div>
+<script id="vertexShader" type="x-shader/x-vertex">
+  attribute vec3 aVertexPosition;
+  uniform float gScale;
+  void main(void) {
+    gl_Position = vec4(gScale*aVertexPosition,1.0);
+  }
+
+</script>
+<script id="fragmentShader" type="x-shader/x-fragment">
+    precision mediump float;
+    void main(){
+        vec4 coord = gl_FragCoord;
+        gl_FragColor = vec4(1.0,0.0,0.0,1.0);
+    }
+</script>
+
+<script>
+    function createShader(gl, source, type){
+        var shader= gl.createShader(type);
+        source = document.getElementById(source).text;
+        gl.shaderSource(shader, source);
+        gl.compileShader(shader);
+        return shader;
+    }
+
+    var canvas = document.getElementById('canvas');
+    var gl = canvas.getContext("webgl");
+
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    // Enable depth testing
+    gl.enable(gl.DEPTH_TEST);
+    // Near things obscure far things
+    gl.depthFunc(gl.LEQUAL);
+    // Clear the color as well as the depth buffer.
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+
+    var vertexShader = createShader(gl,'vertexShader',gl.VERTEX_SHADER);
+    var fragShader = createShader(gl, 'fragmentShader', gl.FRAGMENT_SHADER);
+
+    var program = gl.createProgram();
+
+    gl.attachShader(program,vertexShader);
+    gl.attachShader(program,fragShader);
+
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        alert("Unable to initialize the shader program.");
+    }
+
+    gl.useProgram(program);
+
+    var vertices = [
+        -1,-1,1,
+        0,1,1,
+        1,-1,1];
+    var squareVerticesBuffer = gl.createBuffer();
+    gl.bindBuffer(gl.ARRAY_BUFFER, squareVerticesBuffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
+
+    var vertexPositionAttribute = gl.getAttribLocation(program, "aVertexPosition");
+    gl.enableVertexAttribArray(vertexPositionAttribute);
+    gl.vertexAttribPointer(vertexPositionAttribute, 3, gl.FLOAT, false, 0, 0);
+    var  scale  = 4;
+    var gScaleLocation = gl.getUniformLocation(program,'gScale');
+    gl.uniform1f(gScaleLocation,Math.sin(scale));
+    //type,start,num
+    gl.drawArrays(gl.TRIANGLES, 0, 3);
+    var error = gl.getError();
+    while(error){
+        console.log(error);
+        error = gl.getError();
+    }
+</script>
+<script></script>
+</body>
+</html>

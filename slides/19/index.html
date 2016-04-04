@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Rain</title>
+    <style>
+        #container{width: 800px;height: 600px;}
+    </style>
+</head>
+<body>
+<div id="container">
+    <canvas id="canvas"></canvas>
+</div>
+<script src="../js/Matrix.js"></script>
+<script src="../js/Vector.js"></script>
+<script src="../js/generalGeometry.js"></script>
+<script src="../js/webgl.js"></script>
+
+<script id="vertexShader" type="x-shader/x-vertex">
+    attribute vec3 vPosition;
+    attribute vec4 vColor;
+    attribute vec2 textureCoord;
+    uniform   mat4 mvpMatrix;
+    varying   vec4 Color;
+    varying   vec2 TextureCoord;
+
+    void main(void){
+        Color = vColor;
+        TextureCoord = textureCoord;
+        gl_Position   = mvpMatrix * vec4(vPosition, 1.0);
+    }
+</script>
+<script id="fragmentShader" type="x-shader/x-fragment">
+    precision mediump float;
+    uniform sampler2D texture;
+    varying vec4      Color;
+    varying vec2      TextureCoord;
+
+    void main(void){
+	    vec4 smpColor = texture2D(texture, TextureCoord);
+	    gl_FragColor  = Color*smpColor;
+    }
+</script>
+
+<script>
+    var canvas = document.getElementById('canvas');
+    canvas.width = 400;
+    canvas.height = 300;
+    var gl = canvas.getContext("webgl");
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
+    // Enable depth testing
+    gl.enable(gl.DEPTH_TEST);
+    // Near things obscure far things
+    gl.depthFunc(gl.LEQUAL);
+    // Clear the color as well as the depth buffer.
+    //gl.enable(gl.CULL_FACE);
+
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+
+
+    var vertexShader = createShader(gl,'vertexShader',gl.VERTEX_SHADER);
+    var fragShader = createShader(gl, 'fragmentShader', gl.FRAGMENT_SHADER);
+
+    var program = gl.createProgram();
+
+    gl.attachShader(program,vertexShader);
+    gl.attachShader(program,fragShader);
+    gl.linkProgram(program);
+
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+        console.log("Unable to initialize the shader program.");
+    }
+    gl.useProgram(program);
+
+    var attLocation = [];
+    attLocation[0] = gl.getAttribLocation(program, 'vPosition');
+    attLocation[1] = gl.getAttribLocation(program, 'vColor');
+    attLocation[2] = gl.getAttribLocation(program, 'textureCoord');
+
+    var attStride = [];
+    attStride[0] = 3;
+    attStride[1] = 4;
+    attStride[2] = 2;
+
+
+    var position = [
+        -1.0,  1.0 , 0.0,
+        1.0 ,  1.0 , 0.0,
+        -1.0, -1.0 , 0.0,
+        1.0 , -1.0 , 0.0
+    ];
+    var color = [
+            1,1,1,1,
+            1,1,1,1,
+            1,1,1,1,
+            1,1,1,1
+    ];
+    var textureCoord = [
+            0.0,0.0,
+            1.0,0.0,
+            0.0,1.0,
+            1.0,1.0
+    ];
+    var index = [
+            0,1,2,
+            3,2,1
+    ];
+
+    var vPosition = createVBO(gl,position);
+    var vColor = createVBO(gl,color);
+    var vTextureCoord = createVBO(gl,textureCoord);
+    var iInx = createIBO(gl,index);
+
+    setAttribute(gl,[vPosition,vColor,vTextureCoord],attLocation,attStride);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, iInx);
+
+
+    var uniLocation = [];
+    uniLocation[0]  = gl.getUniformLocation(program, 'mvpMatrix');
+    uniLocation[1]  = gl.getUniformLocation(program, 'texture');
+
+    var project = Matrix.perspective(Math.PI/2,400,300,0.1,100);
+    var view = Matrix.lookAt([0,0,2],[0,0,0],[0,1,0]);
+    var pvMatrix = Matrix.multiply(project,view);
+    var mvpMatrix = Matrix.transform(pvMatrix);
+
+    gl.uniformMatrix4fv(uniLocation[0],false,mvpMatrix);
+    gl.activeTexture(gl.TEXTURE0);
+    var texture = null;
+    gl.bindTexture(gl.TEXTURE_2D,texture);
+    gl.uniform1i(uniLocation[1],0);
+
+
+    createTexture("img/drop-color.png");
+
+    gl.drawElements(gl.TRIANGLES,6,gl.UNSIGNED_SHORT,0);
+//
+
+
+    setInterval(function(){
+        gl.clearColor(0.0, 0.0, 0.0, 1.0);
+        // Enable depth testing
+        gl.enable(gl.DEPTH_TEST);
+        // Near things obscure far things
+        gl.depthFunc(gl.LEQUAL);
+        // Clear the color as well as the depth buffer.
+        //gl.enable(gl.CULL_FACE);
+
+        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+        gl.bindTexture(gl.TEXTURE_2D,texture);
+        gl.uniform1i(uniLocation[1],0);
+        gl.drawElements(gl.TRIANGLES,6,gl.UNSIGNED_SHORT,0);
+    },600);
+
+
+    var error = gl.getError();
+    while(error){
+        console.log(error);
+        error = gl.getError();
+    }
+
+    function createTexture(source){
+        var img = new Image();
+        img.onload = function(){
+            var tex = gl.createTexture();
+            gl.bindTexture(gl.TEXTURE_2D,tex);
+            gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
+            gl.generateMipmap(gl.TEXTURE_2D);
+            gl.bindTexture(gl.TEXTURE_2D,null);
+            texture = tex;
+        };
+        img.src = source;
+    }
+
+
+</script>
+<script></script>
+</body>
+</html>

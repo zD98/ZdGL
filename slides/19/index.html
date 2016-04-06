@@ -32,13 +32,16 @@
 </script>
 <script id="fragmentShader" type="x-shader/x-fragment">
     precision mediump float;
-    uniform sampler2D texture;
+    uniform sampler2D texture0;
+    uniform sampler2D texture1;
     varying vec4      Color;
     varying vec2      TextureCoord;
 
     void main(void){
-	    vec4 smpColor = texture2D(texture, TextureCoord);
-	    gl_FragColor  = Color*smpColor;
+	    vec4 smpColor0 = texture2D(texture0, TextureCoord);
+	    vec4 smpColor1 = texture2D(texture1, TextureCoord);
+	    vec3 dColor = smpColor0.rgb + smpColor1.rgb;
+	    gl_FragColor  = vec4(smpColor0.rgb,smpColor1.a);
     }
 </script>
 
@@ -117,7 +120,8 @@
 
     var uniLocation = [];
     uniLocation[0]  = gl.getUniformLocation(program, 'mvpMatrix');
-    uniLocation[1]  = gl.getUniformLocation(program, 'texture');
+    uniLocation[1]  = gl.getUniformLocation(program, 'texture0');
+    uniLocation[2]  = gl.getUniformLocation(program, 'texture1');
 
     var project = Matrix.perspective(Math.PI/2,400,300,0.1,100);
     var view = Matrix.lookAt([0,0,2],[0,0,0],[0,1,0]);
@@ -125,13 +129,12 @@
     var mvpMatrix = Matrix.transform(pvMatrix);
 
     gl.uniformMatrix4fv(uniLocation[0],false,mvpMatrix);
-    gl.activeTexture(gl.TEXTURE0);
-    var texture = null;
-    gl.bindTexture(gl.TEXTURE_2D,texture);
-    gl.uniform1i(uniLocation[1],0);
+
+    var texture0 = null,texture1 = null;
 
 
-    createTexture("img/drop-color.png");
+    createTexture("img/drop-color.png",0);
+    createTexture("img/drop-alpha.png",1);
 
     gl.drawElements(gl.TRIANGLES,6,gl.UNSIGNED_SHORT,0);
 //
@@ -147,10 +150,17 @@
         //gl.enable(gl.CULL_FACE);
 
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-        gl.bindTexture(gl.TEXTURE_2D,texture);
+
+        gl.activeTexture(gl.TEXTURE0);
+        gl.bindTexture(gl.TEXTURE_2D,texture0);
         gl.uniform1i(uniLocation[1],0);
+
+        gl.activeTexture(gl.TEXTURE1);
+        gl.bindTexture(gl.TEXTURE_2D,texture1);
+        gl.uniform1i(uniLocation[2],1);
+
         gl.drawElements(gl.TRIANGLES,6,gl.UNSIGNED_SHORT,0);
-    },600);
+    },60);
 
 
     var error = gl.getError();
@@ -159,7 +169,7 @@
         error = gl.getError();
     }
 
-    function createTexture(source){
+    function createTexture(source,number){
         var img = new Image();
         img.onload = function(){
             var tex = gl.createTexture();
@@ -167,7 +177,16 @@
             gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,img);
             gl.generateMipmap(gl.TEXTURE_2D);
             gl.bindTexture(gl.TEXTURE_2D,null);
-            texture = tex;
+            switch(number){
+                case 0:
+                    texture0 = tex;
+                    break;
+                case 1:
+                    texture1 = tex;
+                    break;
+                default:
+                    break;
+            }
         };
         img.src = source;
     }

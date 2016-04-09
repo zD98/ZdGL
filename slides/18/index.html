@@ -55,7 +55,7 @@
         float diffuse = clamp(dot(Normal,invLight),0.1,1.0);
         float specular = pow(clamp(dot(Normal,halfLE),0.0,1.0),20.0);
         vec4 light = Color * vec4(vec3(diffuse),1.0) + vec4(vec3(specular),1.0);
-        vec4 distColor = light + ambientColor;
+        vec4 distColor = light+ light* ambientColor;
         gl_FragColor = distColor;
     }
 </script>

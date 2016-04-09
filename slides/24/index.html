@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Frog</title>
+    <title>OPENGL-Light-点光源</title>
     <style>
         #container{width: 800px;height: 600px;}
     </style>
@@ -23,7 +23,6 @@
   attribute vec4 vColor;
   uniform mat4 MVPMatrix;
 
-  varying float v_Dist;
   varying vec3 Normal;
   varying vec4 Color;
   void main(void) {
@@ -32,7 +31,6 @@
     Color = vColor;
     Normal = vNormal;
     gl_Position = MVPMatrix*vec4(aVertexPosition,1.0);
-    v_Dist = gl_Position.w;
   }
 
 </script>
@@ -42,10 +40,6 @@
     uniform vec3 lightDirection;
     uniform vec4 ambientColor;
     uniform vec3 eyeDirection;
-    uniform vec3 eyePosition;
-    uniform vec3 fogColor;
-    uniform vec2 fogDist;
-    varying float v_Dist;
     varying vec3 Normal;
     varying vec4 Color;
     void main(){
@@ -56,12 +50,8 @@
         float diffuse = clamp(dot(Normal,invLight),0.1,1.0);
         float specular = pow(clamp(dot(Normal,halfLE),0.0,1.0),50.0);
         vec4 light = Color * vec4(vec3(diffuse),1.0) + vec4(vec3(specular),1.0);
-        vec4 distColor = light+light*ambientColor;
-
-        float fogFactor = clamp((fogDist.y-v_Dist)/(fogDist.y,fogDist.x),0.0,1.0);
-        vec3 color = mix(fogColor,vec3(distColor),fogFactor);
-
-        gl_FragColor = vec4(color,distColor.a);
+        vec4 distColor = light+ambientColor;
+        gl_FragColor = distColor;
     }
 </script>
 
@@ -77,6 +67,7 @@
     gl.depthFunc(gl.LEQUAL);
     // Clear the color as well as the depth buffer.
     //gl.enable(gl.CULL_FACE);
+
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 
 
@@ -120,8 +111,6 @@
     var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
     var ambientColorLocation = gl.getUniformLocation(program,"ambientColor");
     var eyeDirectionLocation = gl.getUniformLocation(program,"eyeDirection");
-    var fogColorLocation = gl.getUniformLocation(program,"fogColor");
-    var fogDistLocation = gl.getUniformLocation(program,'fogDist');
     //计数  保存模型变换矩阵
     var count  = 0,tempMatrix = [
         1,0,0,0,
@@ -133,19 +122,13 @@
     var lightDirection = [-1,1,1];
     var ambientColor = [0.1,0.1,0.1,1.0];
     var eyeDirection = [0.0,0.0,10];
-    var fogColor = [0.2,0.2,0.2];
-    var fogDist = [1,10];
-    gl.uniform3fv(fogColorLocation,fogColor);
-    gl.uniform2fv(fogDistLocation,fogDist);
     function render(){
         gl.clearColor(0.0,0.0,0.0,1.0);
         gl.clearDepth(1.0);
         gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
         count++;
         let a = (count%360) *Math.PI /180;
-
         let mMatrix = Matrix.rotate(tempMatrix,a,[0,1,1]);
-        mMatrix = Matrix.translate(mMatrix,[0,0,-0.5]);
         let mvpMatrix;
         let invMatrix  = Matrix.inverse(mMatrix);
 
@@ -156,7 +139,6 @@
         gl.uniform3fv(lightDirectionLocation,lightDirection);
         gl.uniform4fv(ambientColorLocation,ambientColor);
         gl.uniform3fv(eyeDirectionLocation,eyeDirection);
-
         gl.drawElements(gl.TRIANGLES,segNum,gl.UNSIGNED_SHORT,0);
         gl.flush();
         requestAnimationFrame(render);

@@ -40,7 +40,7 @@
     void main(void){
 	    vec4 smpColor0 = texture2D(texture0, TextureCoord);
 	    vec4 smpColor1 = texture2D(texture1, TextureCoord);
-	    vec3 dColor = smpColor0.rgb + smpColor1.rgb;
+	    vec3 dColor = smpColor0.rgb+smpColor1.rgb;
 	    gl_FragColor  = vec4(smpColor0.rgb,smpColor1.a);
     }
 </script>

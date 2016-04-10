@@ -26,13 +26,11 @@
   uniform mat4 MVPMatrix;
   uniform mat4 invMatrix;
 
-
-
   varying vec3 Normal;
   varying vec4 Color;
   varying vec4 Position;
-  void main(void) {
 
+  void main(void) {
 
     Color = vColor;
     Normal = normalize(invMatrix * vec4(vNormal,0.0)).xyz;
@@ -46,7 +44,7 @@
     precision mediump float;
 
     uniform vec3 LightColor;
-    uniform vec3 HalfVector;
+    uniform vec3 LightPosition;
     uniform float Shininess;
     uniform float Strength;
     uniform vec3 Ambient;
@@ -66,9 +64,23 @@
         float lightDistance = length(lightDirection);
 
         lightDirection = lightDirection / lightDistance;
-        vec3 attenuation = 1.0/(ConstantAttenuation
-                +LinearAttenuation*lightDistance
-                +QuadraticAttenuation*lightDistance*lightDistance);
+
+        float attenuation = 1.0/(ConstantAttenuation+LinearAttenuation*lightDistance+QuadraticAttenuation*lightDistance*lightDistance);
+
+        vec3 halfVector = normalize(lightDirection +EyeDirection);
+
+
+        float diffuse = max(0.0,dot(Normal,lightDirection));
+        float specular = max(0.0, dot(Normal, halfVector));
+        if(diffuse == 0.0){
+            specular = 0.0;
+        }else{
+            specular = pow(specular, Shininess)*Strength;
+        }
+        vec3 scatteredLight = Ambient + LightColor*diffuse*attenuation;
+        vec3 reflectedLight = LightColor * specular *attenuation;
+        vec3 rgb = min(Color.rgb*scatteredLight+reflectedLight,vec3(1.0));
+        gl_FragColor = vec4(rgb,Color.a);
 
     }
 </script>
@@ -124,11 +136,19 @@
     var view = Matrix.lookAt([0,0,10],[0,0,0],[0,1,0]);
     var pvMatrix = Matrix.multiply(project,view);
 
-    var lightDirectionLocation = gl.getUniformLocation(program, "lightDirection");
-    var invMatrixLocation = gl.getUniformLocation(program, "invMatrix");
-    var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
-    var ambientColorLocation = gl.getUniformLocation(program,"ambientColor");
     var eyeDirectionLocation = gl.getUniformLocation(program,"eyeDirection");
+    var lightPositionLocation = gl.getUniformLocation(program, "LightPosition");
+    var lightColorLocation = gl.getUniformLocation(program,"LightColor");
+    var invMatrixLocation = gl.getUniformLocation(program, "invMatrix");
+    var MVMatrixLocation = gl.getUniformLocation(program,"MVMatrix");
+    var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
+    var ambientColorLocation = gl.getUniformLocation(program,"Ambient");
+    var halfVectorLocation = gl.getUniformLocation(program,"HalfVector");
+    var shininessLocation= gl.getUniformLocation(program,"Shininess");
+    var strengthLocation = gl.getUniformLocation(program,"Strength");
+    var ConstantAttenuationLocation = gl.getUniformLocation(program,"ConstantAttenuation");
+    var LinearAttenuationLocation = gl.getUniformLocation(program,"LinearAttenuation");
+    var QuadraticAttenuation = gl.getUniformLocation(program,"QuadraticAttenuation");
     //计数  保存模型变换矩阵
     var count  = 0,tempMatrix = [
         1,0,0,0,
@@ -137,9 +157,27 @@
         0,0,0,1
     ];
 
-    var lightDirection = [-1,1,1];
-    var ambientColor = [0.1,0.1,0.1,1.0];
-    var eyeDirection = [0.0,0.0,10];
+    var eyeDirection = [0.0,0.0,-10];
+    var lightPosition = [0,2,1];
+    var Ambient = [0.2,0.2,0.2];
+    var lightColor = [1.0,1.0,1.0];
+    var halfVector = [0.55,0.55,0.55];
+    var shininess = 20;
+    var strength = 5;
+    var constant = 1;
+    var linear = 1;
+    var quadratic = 1;
+    gl.uniform3fv(lightPositionLocation,lightPosition);
+    gl.uniform3fv(lightColorLocation,lightColor);
+    gl.uniform3fv(ambientColorLocation,Ambient);
+    gl.uniform3fv(halfVectorLocation,halfVector);
+    gl.uniform1f(shininessLocation,shininess);
+    gl.uniform1f(strengthLocation,strength);
+    gl.uniform3fv(eyeDirectionLocation,eyeDirection);
+    gl.uniform1f(ConstantAttenuationLocation,constant);
+    gl.uniform1f(LinearAttenuationLocation,linear);
+    gl.uniform1f(QuadraticAttenuation,quadratic);
+
     function render(){
         gl.clearColor(0.0,0.0,0.0,1.0);
         gl.clearDepth(1.0);
@@ -149,14 +187,15 @@
         let mMatrix = Matrix.rotate(tempMatrix,a,[0,1,1]);
         let mvpMatrix;
         let invMatrix  = Matrix.inverse(mMatrix);
+        let mvMatrix = Matrix.multiply(view,mMatrix);
+        mvMatrix = Matrix.inverse(mvMatrix);
 
         mvpMatrix = Matrix.multiply(pvMatrix,mMatrix);
         mvpMatrix = Matrix.transform(mvpMatrix);
         gl.uniformMatrix4fv(MVPMatrixLocation, false, mvpMatrix);
         gl.uniformMatrix4fv(invMatrixLocation,false,invMatrix);
-        gl.uniform3fv(lightDirectionLocation,lightDirection);
-        gl.uniform4fv(ambientColorLocation,ambientColor);
-        gl.uniform3fv(eyeDirectionLocation,eyeDirection);
+        gl.uniformMatrix4fv(MVMatrixLocation,false,mvMatrix);
+
         gl.drawElements(gl.TRIANGLES,segNum,gl.UNSIGNED_SHORT,0);
         gl.flush();
         requestAnimationFrame(render);

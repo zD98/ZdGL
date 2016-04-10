@@ -19,38 +19,25 @@
 <script id="vertexShader" type="x-shader/x-vertex">
 
   attribute vec3 aVertexPosition;
-  attribute vec3 vNormal;
   attribute vec4 vColor;
   uniform mat4 MVPMatrix;
 
-  varying vec3 Normal;
   varying vec4 Color;
   void main(void) {
 
 
     Color = vColor;
-    Normal = vNormal;
     gl_Position = MVPMatrix*vec4(aVertexPosition,1.0);
   }
 
 </script>
 <script id="fragmentShader" type="x-shader/x-fragment">
     precision mediump float;
-    uniform mat4 invMatrix;
-    uniform vec3 lightDirection;
     uniform vec4 ambientColor;
-    uniform vec3 eyeDirection;
-    varying vec3 Normal;
     varying vec4 Color;
     void main(){
-
-        vec3 invLight = normalize(invMatrix*vec4(lightDirection,0.0)).xyz;
-        vec3 invEye = normalize(invMatrix * vec4(eyeDirection,0.0)).xyz;
-        vec3 halfLE = normalize(invLight + invEye);
-        float diffuse = clamp(dot(Normal,invLight),0.1,1.0);
-        float specular = pow(clamp(dot(Normal,halfLE),0.0,1.0),50.0);
-        vec4 light = Color * vec4(vec3(diffuse),1.0) + vec4(vec3(specular),1.0);
-        vec4 distColor = light+ambientColor;
+           //环境光与源色相乘
+        vec4 distColor = min(Color*ambientColor,vec4(1.0));
         gl_FragColor = distColor;
     }
 </script>
@@ -89,14 +76,11 @@
 
     var vbos = [],attL = [],attS = [];
     vbos[0] = createVBO(gl,v[0]);
-    vbos[1] = createVBO(gl,v[1]);
-    vbos[2] = createVBO(gl,v[2]);
+    vbos[1] = createVBO(gl,v[2]);
     attL[0] = gl.getAttribLocation(program, "aVertexPosition");
-    attL[1] = gl.getAttribLocation(program, "vNormal");
-    attL[2] = gl.getAttribLocation(program, "vColor");
+    attL[1] = gl.getAttribLocation(program, "vColor");
     attS[0] = 3;
-    attS[1] = 3;
-    attS[2] = 4;
+    attS[1] = 4;
     setAttribute(gl,vbos,attL,attS);
 
     var ibo = createIBO(gl,v[3]);
@@ -106,11 +90,8 @@
     var view = Matrix.lookAt([0,0,10],[0,0,0],[0,1,0]);
     var pvMatrix = Matrix.multiply(project,view);
 
-    var lightDirectionLocation = gl.getUniformLocation(program, "lightDirection");
-    var invMatrixLocation = gl.getUniformLocation(program, "invMatrix");
     var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
     var ambientColorLocation = gl.getUniformLocation(program,"ambientColor");
-    var eyeDirectionLocation = gl.getUniformLocation(program,"eyeDirection");
     //计数  保存模型变换矩阵
     var count  = 0,tempMatrix = [
         1,0,0,0,
@@ -119,9 +100,7 @@
         0,0,0,1
     ];
 
-    var lightDirection = [-1,1,1];
-    var ambientColor = [0.1,0.1,0.1,1.0];
-    var eyeDirection = [0.0,0.0,10];
+    var ambientColor = [0.8,0.8,0.8,1.0];
     function render(){
         gl.clearColor(0.0,0.0,0.0,1.0);
         gl.clearDepth(1.0);
@@ -130,15 +109,11 @@
         let a = (count%360) *Math.PI /180;
         let mMatrix = Matrix.rotate(tempMatrix,a,[0,1,1]);
         let mvpMatrix;
-        let invMatrix  = Matrix.inverse(mMatrix);
 
         mvpMatrix = Matrix.multiply(pvMatrix,mMatrix);
         mvpMatrix = Matrix.transform(mvpMatrix);
         gl.uniformMatrix4fv(MVPMatrixLocation, false, mvpMatrix);
-        gl.uniformMatrix4fv(invMatrixLocation,false,invMatrix);
-        gl.uniform3fv(lightDirectionLocation,lightDirection);
         gl.uniform4fv(ambientColorLocation,ambientColor);
-        gl.uniform3fv(eyeDirectionLocation,eyeDirection);
         gl.drawElements(gl.TRIANGLES,segNum,gl.UNSIGNED_SHORT,0);
         gl.flush();
         requestAnimationFrame(render);

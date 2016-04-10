@@ -21,37 +21,55 @@
   attribute vec3 aVertexPosition;
   attribute vec3 vNormal;
   attribute vec4 vColor;
+
+  uniform mat4 MVMatrix;
   uniform mat4 MVPMatrix;
+  uniform mat4 invMatrix;
+
+
 
   varying vec3 Normal;
   varying vec4 Color;
+  varying vec4 Position;
   void main(void) {
 
 
     Color = vColor;
-    Normal = vNormal;
+    Normal = normalize(invMatrix * vec4(vNormal,0.0)).xyz;
+    Position = MVMatrix * vec4(aVertexPosition,1.0);
     gl_Position = MVPMatrix*vec4(aVertexPosition,1.0);
+
   }
 
 </script>
 <script id="fragmentShader" type="x-shader/x-fragment">
     precision mediump float;
-    uniform mat4 invMatrix;
-    uniform vec3 lightDirection;
-    uniform vec4 ambientColor;
-    uniform vec3 eyeDirection;
+
+    uniform vec3 LightColor;
+    uniform vec3 HalfVector;
+    uniform float Shininess;
+    uniform float Strength;
+    uniform vec3 Ambient;
+
+    uniform vec3 EyeDirection;
+    uniform float ConstantAttenuation;
+    uniform float LinearAttenuation;
+    uniform float QuadraticAttenuation;
+
+
     varying vec3 Normal;
     varying vec4 Color;
-    void main(){
+    varying vec4 Position;
 
-        vec3 invLight = normalize(invMatrix*vec4(lightDirection,0.0)).xyz;
-        vec3 invEye = normalize(invMatrix * vec4(eyeDirection,0.0)).xyz;
-        vec3 halfLE = normalize(invLight + invEye);
-        float diffuse = clamp(dot(Normal,invLight),0.1,1.0);
-        float specular = pow(clamp(dot(Normal,halfLE),0.0,1.0),50.0);
-        vec4 light = Color * vec4(vec3(diffuse),1.0) + vec4(vec3(specular),1.0);
-        vec4 distColor = light+ambientColor;
-        gl_FragColor = distColor;
+    void main(){
+        vec3 lightDirection = LightPosition - vec3(Position);
+        float lightDistance = length(lightDirection);
+
+        lightDirection = lightDirection / lightDistance;
+        vec3 attenuation = 1.0/(ConstantAttenuation
+                +LinearAttenuation*lightDistance
+                +QuadraticAttenuation*lightDistance*lightDistance);
+
     }
 </script>
 

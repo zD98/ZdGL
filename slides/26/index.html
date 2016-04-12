@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>OPENGL-Light-聚光灯</title>
+    <title>OPENGL-Light-多光源</title>
     <style>
         #container{width: 800px;height: 600px;}
     </style>
@@ -57,9 +57,9 @@
         float constantAttenuation;
         float linearAttenuation;
         float quadraticAttenuation;
-    }
+    };
 
-    const int MaxLights = 10;
+    const int MaxLights = 2;
 
     uniform LightProperties Lights[MaxLights];
 
@@ -80,14 +80,14 @@
                 continue;
             }
             vec3 halfVector;
-            vec3 lightDirection = Light[light].position;
+            vec3 lightDirection = Lights[light].position;
             float attenuation = 1.0;
 
             if(Lights[light].isLocal){
                 lightDirection = lightDirection - vec3(Position);
                 float lightDistance = length(lightDirection);
                 lightDirection = lightDirection / lightDistance;
-                attenuation = 1.0/(ConstantAttenuation+LinearAttenuation*lightDistance+QuadraticAttenuation*lightDistance*lightDistance);
+                attenuation = 1.0 / (Lights[light].constantAttenuation+Lights[light].linearAttenuation*lightDistance+Lights[light].quadraticAttenuation*lightDistance*lightDistance);
 
                 if(Lights[light].isSpot) {
                     float spotCos = dot(lightDirection,-Lights[light].coneDirection);
@@ -96,9 +96,8 @@
                     }else{
                         attenuation *=pow(spotCos,Lights[light].spotExponent);
                     }
-
-                    halfVector = normalize(lightDirection +EyeDirection);
                 }
+                halfVector = normalize(lightDirection +EyeDirection);
             }else{
                 halfVector = Lights[light].halfVector;
             }
@@ -172,21 +171,42 @@
     var pvMatrix = Matrix.multiply(project,view);
 
     var eyeDirectionLocation = gl.getUniformLocation(program,"eyeDirection");
-    var lightPositionLocation = gl.getUniformLocation(program, "LightPosition");
-    var lightColorLocation = gl.getUniformLocation(program,"LightColor");
+    //var lightPositionLocation = gl.getUniformLocation(program, "LightPosition");
+    //var lightColorLocation = gl.getUniformLocation(program,"LightColor");
     var invMatrixLocation = gl.getUniformLocation(program, "invMatrix");
     var MVMatrixLocation = gl.getUniformLocation(program,"MVMatrix");
     var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
-    var ambientColorLocation = gl.getUniformLocation(program,"Ambient");
-    var halfVectorLocation = gl.getUniformLocation(program,"HalfVector");
+    //var ambientColorLocation = gl.getUniformLocation(program,"Ambient");
+    //var halfVectorLocation = gl.getUniformLocation(program,"HalfVector");
     var shininessLocation= gl.getUniformLocation(program,"Shininess");
     var strengthLocation = gl.getUniformLocation(program,"Strength");
-    var ConstantAttenuationLocation = gl.getUniformLocation(program,"ConstantAttenuation");
-    var LinearAttenuationLocation = gl.getUniformLocation(program,"LinearAttenuation");
-    var QuadraticAttenuation = gl.getUniformLocation(program,"QuadraticAttenuation");
-    var ConeDirectionLocation = gl.getUniformLocation(program,"ConeDirection");
-    var SpotCosCutoffLocation = gl.getUniformLocation(program,"SpotCosCutoff");
-    var SpotExponentLocation = gl.getUniformLocation(program,"SpotExponent");
+    //var ConstantAttenuationLocation = gl.getUniformLocation(program,"ConstantAttenuation");
+    //var LinearAttenuationLocation = gl.getUniformLocation(program,"LinearAttenuation");
+    //var QuadraticAttenuation = gl.getUniformLocation(program,"QuadraticAttenuation");
+    //var ConeDirectionLocation = gl.getUniformLocation(program,"ConeDirection");
+    //var SpotCosCutoffLocation = gl.getUniformLocation(program,"SpotCosCutoff");
+   // var SpotExponentLocation = gl.getUniformLocation(program,"SpotExponent");
+
+    var Light0Location = gl.getUniformLocation(program,'Lights[0]');
+    var Light1Location = gl.getUniformLocation(program,'Lights[1]');
+
+    var
+        light0IsEnabled = gl.getUniformLocation(program,'Lights[0].isEnabled'),
+        light0IsLocal = gl.getUniformLocation(program,"Lights[0].isLocal"),
+        light0Ambient = gl.getUniformLocation(program,'Lights[0].ambient'),
+        light0Position = gl.getUniformLocation(program,'Lights[0].position'),
+        light0Color = gl.getUniformLocation(program,'Lights[0].color'),
+        light0HalfVector = gl.getUniformLocation(program,'Lights[0].halfVector');
+
+    var
+        light1IsEnabled = gl.getUniformLocation(program,'Lights[1].isEnabled'),
+        light1IsLocal = gl.getUniformLocation(program,"Lights[1].isLocal"),
+        light1Ambient = gl.getUniformLocation(program,'Lights[1].ambient'),
+        light1Color = gl.getUniformLocation(program,'Lights[1].color'),
+        light1Position = gl.getUniformLocation(program,'Lights[1].position'),
+        light1Constant = gl.getUniformLocation(program,'Lights[1].constantAttenuation'),
+        light1Linear = gl.getUniformLocation(program,'Lights[1].linearAttenuation'),
+        light1Quadratic = gl.getUniformLocation(program,'Lights[1].quadraticAttenuation');
     //计数  保存模型变换矩阵
     var count  = 0,tempMatrix = [
         1,0,0,0,
@@ -195,32 +215,43 @@
         0,0,0,1
     ];
 
-    var eyeDirection = [0.0,0.0,-10];
-    var lightPosition = [0,0,10];
-    var Ambient = [0.1,0.1,0.1];
-    var lightColor = [1.0,1.0,1.0];
-    var halfVector = [0.45,0.45,0.45];
+    var eyeDirection = [0.0,0.0,5];
     var shininess = 20;
-    var strength = 1;
-    var constant = 1;
-    var linear = 1;
-    var quadratic = 1;
-    var coneDirection = [0,1,-2];
-    var spotCosCutoff = 0.9;
-    var spotExponent = 6.0;
-    gl.uniform3fv(lightPositionLocation,lightPosition);
-    gl.uniform3fv(lightColorLocation,lightColor);
-    gl.uniform3fv(ambientColorLocation,Ambient);
-    gl.uniform3fv(halfVectorLocation,halfVector);
+    var strength = 7;
+
     gl.uniform1f(shininessLocation,shininess);
     gl.uniform1f(strengthLocation,strength);
     gl.uniform3fv(eyeDirectionLocation,eyeDirection);
-    gl.uniform1f(ConstantAttenuationLocation,constant);
-    gl.uniform1f(LinearAttenuationLocation,linear);
-    gl.uniform1f(QuadraticAttenuation,quadratic);
-    gl.uniform3fv(ConeDirectionLocation,coneDirection);
-    gl.uniform1f(SpotCosCutoffLocation,spotCosCutoff);
-    gl.uniform1f(SpotExponentLocation,spotExponent);
+    var Ambient = [0.2,0.2,0.2];
+    //  Light0
+    gl.uniform1i(light0IsEnabled,1);
+    gl.uniform1i(light0IsLocal,0);
+    gl.uniform3fv(light0Ambient,Ambient);
+    gl.uniform3fv(light0Color,[1.0,1.0,1.0]);
+    gl.uniform3fv(light0HalfVector,[0.55,0.55,0.55]);
+    gl.uniform3fv(light0Position,[1,1,1]);
+    //  Light1
+    var constant = 1;
+    var linear = 1;
+    var quadratic = 1;
+    var lightPosition = [1,1,1];
+    var lightColor = [1.0,1.0,1.0];
+    var halfVector = [0.6,0.6,0.6];
+
+    gl.uniform1i(light1IsEnabled,1);
+    gl.uniform1i(light1IsLocal,1);
+
+    gl.uniform3fv(light1Position,lightPosition);
+    gl.uniform3fv(light1Color,lightColor);
+    gl.uniform3fv(light1Ambient,Ambient);
+    //gl.uniform3fv(light1HalfVector,halfVector);
+
+    gl.uniform1f(light1Constant,constant);
+    gl.uniform1f(light1Linear,linear);
+    gl.uniform1f(light1Quadratic,quadratic);
+
+
+
     function render(){
         gl.clearColor(0.0,0.0,0.0,1.0);
         gl.clearDepth(1.0);

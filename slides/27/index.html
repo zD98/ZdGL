@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>OpenGL-程序式纹理</title>
+    <title>OPENGL-Light-多光源与材质</title>
     <style>
         #container{width: 800px;height: 600px;}
     </style>
@@ -17,69 +17,121 @@
 <script src="../js/webgl.js"></script>
 
 <script id="vertexShader" type="x-shader/x-vertex">
-    uniform vec3 LightPosition;
-    uniform vec3 LightColor;
-    uniform vec3 EyePosition;
-    uniform vec3 Specular;
-    uniform vec3 Ambient;
 
-    uniform float Kd;
-    uniform mat4 MVMatrix;
-    uniform mat4 MVPMatrix;
-    uniform mat4 NormalMatrix;
+  attribute vec3 aVertexPosition;
+  attribute vec3 vNormal;
+  attribute vec4 vColor;
+  attribute float mIndex;
 
-    attribute vec4 MCVertex;
-    attribute vec3 MCNormal;
-    attribute vec2 TexCoord0;
+  uniform mat4 MVMatrix;
+  uniform mat4 MVPMatrix;
+  uniform mat4 invMatrix;
 
-    varying vec3 DiffuseColor;
-    varying vec3 SpecularColor;
-    varying float TexCoord;
+  varying vec3 Normal;
+  varying vec4 Color;
+  varying vec4 Position;
+  varying float MIndex;
+  void main(void) {
 
-    void main(void){
-        vec3 ecPosition = vec3(MVMatrix * MCVertex);
-        vec4 norm = normalize(NormalMatrix * vec4(MCNormal,0.0));
-        vec3 tnorm = norm.xyz;
-        vec3 lightVec = normalize(LightPosition - ecPosition);
+    Color = vColor;
+    MIndex = mIndex;
+    Normal = normalize(invMatrix * vec4(vNormal,0.0)).xyz;
+    Position = MVMatrix * vec4(aVertexPosition,1.0);
+    gl_Position = MVPMatrix*vec4(aVertexPosition,1.0);
 
-        vec3 viewVec = normalize(EyePosition - ecPosition);
-        vec3 hvec = normalize(viewVec + lightVec);
-
-        float spec = clamp(dot(hvec, tnorm),0.0,1.0);
-        spec = pow(spec, 16.0);
-
-        DiffuseColor = LightColor*vec3(Kd*dot(lightVec,tnorm));
-        DiffuseColor = clamp(Ambient+DiffuseColor,0.0,1.0);
-        SpecularColor = clamp((LightColor*Specular*spec),0.0,1.0);
-        TexCoord = TexCoord0.y;
-        gl_Position = MVPMatrix * MCVertex;
-    }
+  }
 
 </script>
 <script id="fragmentShader" type="x-shader/x-fragment">
     precision mediump float;
-    uniform vec3 StripeColor;
-    uniform vec3 BackColor;
 
-    uniform float Width;
-    uniform float Fuzz;
-    uniform float Scale;
+    struct LightProperties {
+        bool isEnabled;
+        bool isLocal;
+        bool isSpot;
+        vec3 ambient;
+        vec3 color;
+        vec3 position;
+        vec3 halfVector;
+        vec3 coneDirection;
+        float spotCosCutoff;
+        float spotExponent;
+        float constantAttenuation;
+        float linearAttenuation;
+        float quadraticAttenuation;
+    };
 
-    varying vec3 DiffuseColor;
-    varying vec3 SpecularColor;
-    varying float TexCoord;
+    struct MaterialProperties {
+        vec3 emission;
+        vec3 ambient;
+        vec3 diffuse;
+        vec3 specular;
+        vec3 shininess;
+    };
 
+    const int MaxLights = 2;
+    const int NumMaterials = 3;
+
+    uniform MaterialProperties Material[NumMaterials];
+    uniform LightProperties Lights[MaxLights];
+
+    uniform float Shininess;
+    uniform float Strength;
+    uniform float EyeDirection;
+
+    varying vec3 Normal;
+    varying vec4 Color;
+    varying vec4 Position;
+    varying float MIndex;
     void main(){
-        float scaleT = fract(TexCoord * Scale);
-        float frac1 = clamp((scaleT/Fuzz),0.0,1.0);
-        float frac2 = clamp((scaleT - Width/Fuzz),0.0,1.0);
+        vec3 scatteredLight = vec3(0.0);
+        vec3 reflectedLight = vec3(0.0);
+        int MatIndex = int(MIndex);
+        MatIndex = 0;
+        for(int light = 0;light<MaxLights;++light){
+            int m = 0;
+            if(!Lights[light].isEnabled){
+                continue;
+            }
+            vec3 halfVector;
+            vec3 lightDirection = Lights[light].position;
+            float attenuation = 1.0;
 
-        frac1 = frac1 * (1.0 - frac2);
-        frac1 = frac1*frac1*(3.0-(2.0*frac1));
+            if(Lights[light].isLocal){
+                lightDirection = lightDirection - vec3(Position);
+                float lightDistance = length(lightDirection);
+                lightDirection = lightDirection / lightDistance;
+                attenuation = 1.0 / (Lights[light].constantAttenuation+Lights[light].linearAttenuation*lightDistance+Lights[light].quadraticAttenuation*lightDistance*lightDistance);
 
-        vec3 finalColor = mix(BackColor,StripeColor,frac1);
+                if(Lights[light].isSpot) {
+                    float spotCos = dot(lightDirection,-Lights[light].coneDirection);
+                    if(spotCos<Lights[light].spotCosCutoff){
+                        attenuation = 0.0;
+                    }else{
+                        attenuation *=pow(spotCos,Lights[light].spotExponent);
+                    }
+                }
+                halfVector = normalize(lightDirection +EyeDirection);
+            }else{
+                halfVector = Lights[light].halfVector;
+            }
 
-        gl_FragColor = vec4(finalColor,1.0);
+            float diffuse = max(0.0,dot(Normal,lightDirection));
+            float specular = max(0.0, dot(Normal, halfVector));
+            if(diffuse == 0.0){
+                specular = 0.0;
+            }else{
+                specular = pow(specular, Shininess)*Strength;
+            }
+            
+            scatteredLight += Lights[light].ambient*attenuation + Lights[light].color*diffuse*attenuation;
+            reflectedLight += Lights[light].color * specular *attenuation;
+            //scatteredLight += Lights[light].ambient * Material[MatIndex].ambient*attenuation + Lights[light].color*Material[MatIndex].diffuse*diffuse*attenuation;
+            //reflectedLight += Lights[light].color * Material[MatIndex].diffuse.specular*specular *attenuation;
+        }
+        vec3 rgb = min(Color.rgb*scatteredLight+reflectedLight,vec3(1.0));
+        //vec3 rgb = min(Material[MatIndex].emission+Color.rgb*scatteredLight+reflectedLight,vec3(1.0));
+        gl_FragColor = vec4(rgb,Color.a);
 
     }
 </script>
@@ -108,106 +160,150 @@
     gl.attachShader(program,vertexShader);
     gl.attachShader(program,fragShader);
     gl.linkProgram(program);
-
+    var tag = 0;
     if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
         console.log("Unable to initialize the shader program.");
+        tag = 1;
+
     }
-    gl.useProgram(program);
+    if(!tag) {
+        gl.useProgram(program);
 
-    var v = torusNT(32,32,1.0,2.0);
+        var v = torusN(8, 8, 1.0, 3.0);
 
-    var vbos = [],attL = [],attS = [];
-    vbos[0] = createVBO(gl,v[0]);
-    vbos[1] = createVBO(gl,v[1]);
-    attL[0] = gl.getAttribLocation(program, "MCVertex");
-    attL[1] = gl.getAttribLocation(program, "MCNormal");
-    attS[0] = 3;
-    attS[1] = 3;
-    vbos[2] = createVBO(gl,v[2]);
-    attL[2] = gl.getAttribLocation(program,"TexCoord0");
-    attS[2] = 2;
+        var vbos = [], attL = [], attS = [];
+        vbos[0] = createVBO(gl, v[0]);
+        vbos[1] = createVBO(gl, v[1]);
+        vbos[2] = createVBO(gl, v[2]);
+        attL[0] = gl.getAttribLocation(program, "aVertexPosition");
+        attL[1] = gl.getAttribLocation(program, "vNormal");
+        attL[2] = gl.getAttribLocation(program, "vColor");
+        attS[0] = 3;
+        attS[1] = 3;
+        attS[2] = 4;
+        setAttribute(gl, vbos, attL, attS);
 
-    setAttribute(gl,vbos,attL,attS);
+        var ibo = createIBO(gl, v[3]);
+        gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, ibo);
+        var segNum = v[3].length;
+        var project = Matrix.perspective(Math.PI / 2, 400, 300, 0.1, 100);
+        var view = Matrix.lookAt([0, 0, 10], [0, 0, 0], [0, 1, 0]);
+        var pvMatrix = Matrix.multiply(project, view);
 
-    var ibo = createIBO(gl,v[3]);
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ibo);
-    var segNum = v[3].length;
+        var eyeDirectionLocation = gl.getUniformLocation(program, "eyeDirection");
+        //var lightPositionLocation = gl.getUniformLocation(program, "LightPosition");
+        //var lightColorLocation = gl.getUniformLocation(program,"LightColor");
+        var invMatrixLocation = gl.getUniformLocation(program, "invMatrix");
+        var MVMatrixLocation = gl.getUniformLocation(program, "MVMatrix");
+        var MVPMatrixLocation = gl.getUniformLocation(program, "MVPMatrix");
+        //var ambientColorLocation = gl.getUniformLocation(program,"Ambient");
+        //var halfVectorLocation = gl.getUniformLocation(program,"HalfVector");
+        var shininessLocation = gl.getUniformLocation(program, "Shininess");
+        var strengthLocation = gl.getUniformLocation(program, "Strength");
+        //var ConstantAttenuationLocation = gl.getUniformLocation(program,"ConstantAttenuation");
+        //var LinearAttenuationLocation = gl.getUniformLocation(program,"LinearAttenuation");
+        //var QuadraticAttenuation = gl.getUniformLocation(program,"QuadraticAttenuation");
+        //var ConeDirectionLocation = gl.getUniformLocation(program,"ConeDirection");
+        //var SpotCosCutoffLocation = gl.getUniformLocation(program,"SpotCosCutoff");
+        // var SpotExponentLocation = gl.getUniformLocation(program,"SpotExponent");
 
-    var project = Matrix.perspective(Math.PI/2,400,300,0.1,100);
-    var view = Matrix.lookAt([0,0,10],[0,0,0],[0,1,0]);
-    var pvMatrix = Matrix.multiply(project,view);
+        var Light0Location = gl.getUniformLocation(program, 'Lights[0]');
+        var Light1Location = gl.getUniformLocation(program, 'Lights[1]');
 
-    var lightPositionLocation = gl.getUniformLocation(program, "LightPosition");
-    var lightColorLocation = gl.getUniformLocation(program,"LightColor");
-    var eyePositionLocation = gl.getUniformLocation(program,"EyePosition");
-    var specularLocation = gl.getUniformLocation(program,"Specular");
-    var ambientLocation = gl.getUniformLocation(program,"Ambient");
-    var kdLocation = gl.getUniformLocation(program,"Kd");
+        var
+                light0IsEnabled = gl.getUniformLocation(program, 'Lights[0].isEnabled'),
+                light0IsLocal = gl.getUniformLocation(program, "Lights[0].isLocal"),
+                light0Ambient = gl.getUniformLocation(program, 'Lights[0].ambient'),
+                light0Position = gl.getUniformLocation(program, 'Lights[0].position'),
+                light0Color = gl.getUniformLocation(program, 'Lights[0].color'),
+                light0HalfVector = gl.getUniformLocation(program, 'Lights[0].halfVector');
 
-    var MVPMatrixLocation = gl.getUniformLocation(program,"MVPMatrix");
-    var MVMatrixLocation = gl.getUniformLocation(program,"MVMatrix");
-    var invMatrixLocation = gl.getUniformLocation(program, "NormalMatrix");
+        var
+                light1IsEnabled = gl.getUniformLocation(program, 'Lights[1].isEnabled'),
+                light1IsLocal = gl.getUniformLocation(program, "Lights[1].isLocal"),
+                light1Ambient = gl.getUniformLocation(program, 'Lights[1].ambient'),
+                light1Color = gl.getUniformLocation(program, 'Lights[1].color'),
+                light1Position = gl.getUniformLocation(program, 'Lights[1].position'),
+                light1Constant = gl.getUniformLocation(program, 'Lights[1].constantAttenuation'),
+                light1Linear = gl.getUniformLocation(program, 'Lights[1].linearAttenuation'),
+                light1Quadratic = gl.getUniformLocation(program, 'Lights[1].quadraticAttenuation');
+        //计数  保存模型变换矩阵
+        var count = 0, tempMatrix = [
+            1, 0, 0, 0,
+            0, 1, 0, 0,
+            0, 0, 1, 0,
+            0, 0, 0, 1
+        ];
 
-    var stripeColorLocation = gl.getUniformLocation(program,"StripeColor");
-    var backColorLocation = gl.getUniformLocation(program,"BackColor");
-    var widthLocation = gl.getUniformLocation(program,"Width");
-    var fuzzLocation = gl.getUniformLocation(program,"Fuzz");
-    var scaleLocation = gl.getUniformLocation(program,"Scale");
+        var eyeDirection = [0.0, 0.0, 5];
+        var shininess = 20;
+        var strength = 7;
+
+        gl.uniform1f(shininessLocation, shininess);
+        gl.uniform1f(strengthLocation, strength);
+        gl.uniform3fv(eyeDirectionLocation, eyeDirection);
+        var Ambient = [0.2, 0.2, 0.2];
+        //  Light0
+        gl.uniform1i(light0IsEnabled, 1);
+        gl.uniform1i(light0IsLocal, 0);
+        gl.uniform3fv(light0Ambient, Ambient);
+        gl.uniform3fv(light0Color, [1.0, 1.0, 1.0]);
+        gl.uniform3fv(light0HalfVector, [0.55, 0.55, 0.55]);
+        gl.uniform3fv(light0Position, [1, 1, 1]);
+        //  Light1
+        var constant = 1;
+        var linear = 1;
+        var quadratic = 1;
+        var lightPosition = [1, 1, 1];
+        var lightColor = [1.0, 1.0, 1.0];
+        var halfVector = [0.6, 0.6, 0.6];
+
+        gl.uniform1i(light1IsEnabled, 1);
+        gl.uniform1i(light1IsLocal, 1);
+
+        gl.uniform3fv(light1Position, lightPosition);
+        gl.uniform3fv(light1Color, lightColor);
+        gl.uniform3fv(light1Ambient, Ambient);
+        //gl.uniform3fv(light1HalfVector,halfVector);
+
+        gl.uniform1f(light1Constant, constant);
+        gl.uniform1f(light1Linear, linear);
+        gl.uniform1f(light1Quadratic, quadratic);
 
 
+        function render() {
+            gl.clearColor(0.0, 0.0, 0.0, 1.0);
+            gl.clearDepth(1.0);
+            gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+            count++;
+            let a = (count % 360) * Math.PI / 180;
+            let mMatrix = Matrix.rotate(tempMatrix, a, [0, 1, 1]);
+            let mvpMatrix;
+            let invMatrix = Matrix.inverse(mMatrix);
+            let mvMatrix = Matrix.multiply(view, mMatrix);
+            mvMatrix = Matrix.inverse(mvMatrix);
 
-    gl.uniform3fv(lightPositionLocation,[5,4,3]);
-    gl.uniform3fv(lightColorLocation,[0,1,1]);
-    gl.uniform3fv(eyePositionLocation,[0,0,10]);
-    gl.uniform3fv(specularLocation,[1,1,1]);
-    gl.uniform3fv(ambientLocation,[0.4,0.1,0.1]);
-    gl.uniform1f(kdLocation,0.5);
+            mvpMatrix = Matrix.multiply(pvMatrix, mMatrix);
+            mvpMatrix = Matrix.transform(mvpMatrix);
+            gl.uniformMatrix4fv(MVPMatrixLocation, false, mvpMatrix);
+            gl.uniformMatrix4fv(invMatrixLocation, false, invMatrix);
+            gl.uniformMatrix4fv(MVMatrixLocation, false, mvMatrix);
 
-    gl.uniform3fv(stripeColorLocation,[0,1.0,0.5]);
-    gl.uniform3fv(backColorLocation,[0.5,1.0,1.0]);
-    gl.uniform1f(widthLocation,2.0);
-    gl.uniform1f(fuzzLocation,0.6);
-    gl.uniform1f(scaleLocation,2.0);
+            gl.drawElements(gl.TRIANGLES, segNum, gl.UNSIGNED_SHORT, 0);
+            gl.flush();
+            requestAnimationFrame(render);
+        }
 
-    //计数  保存模型变换矩阵
-    var count  = 0,tempMatrix = [
-        1,0,0,0,
-        0,1,0,0,
-        0,0,1,0,
-        0,0,0,1
-    ];
+        render();
 
-    function render(){
-        gl.clearColor(0.0,0.0,0.0,1.0);
-        gl.clearDepth(1.0);
-        gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
-        count++;
-        let a = (count%360) *Math.PI /180;
-        let mMatrix = Matrix.rotate(tempMatrix,a,[0,1,1]);
-        let mvpMatrix;
-        let invMatrix  = Matrix.inverse(mMatrix);
-        let mvMatrix = Matrix.multiply(view,mMatrix);
-        mvMatrix = Matrix.inverse(mvMatrix);
-        mvpMatrix = Matrix.multiply(pvMatrix,mMatrix);
-        mvpMatrix = Matrix.transform(mvpMatrix);
-        gl.uniformMatrix4fv(MVMatrixLocation,false,mvMatrix);
-        gl.uniformMatrix4fv(MVPMatrixLocation, false, mvpMatrix);
-        gl.uniformMatrix4fv(invMatrixLocation,false,invMatrix);
+//    var error = gl.getError();
+//    while(error){
+//        console.log(error);
+//        error = gl.getError();
+//    }
 
-        gl.drawElements(gl.TRIANGLES,segNum,gl.UNSIGNED_SHORT,0);
-        gl.flush();
-        requestAnimationFrame(render);
+
     }
-    render();
-
-    var error = gl.getError();
-    while(error){
-        console.log(error);
-        error = gl.getError();
-    }
-
-
-
     function hsva(h,s,v,a){
         if(s>1||v>1||a>1){
             return ;

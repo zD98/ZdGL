@@ -35,11 +35,27 @@
           gl_FragColor = vec4(1.0,1.0,1.0,1.0);
     }
 </script>
+<script>
+    function Tetrahedron(){
+        this.position = {
+            x:0,
+            y:0,
+            z:0
+        }
+        this.r = 0;
+    }
+Tetrahedron.prototype.go = function(){
+
+}
+Tetrahedron.prototype.render = function(){
+
+}
+</script>
 <script >
 
     var canvas = document.getElementById('canvas');
-    canvas.width = 400;
-    canvas.height = 300;
+    canvas.width = 1200;
+    canvas.height = 900;
     var gl = canvas.getContext("webgl");
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     // Enable depth testing

@@ -1,6 +1,19 @@
 /**
  * Created by zd98 on 2016/3/30.
  */
+function triangle (center,l) {
+    var x = center[0],y = center[1], z= center[2];
+    var pos = [], index = [], color = [];
+    pos.push(x+l,y+l,z+l);
+    pos.push(x-l,y+l,z-l);
+    pos.push(x-l,y-l,z+l);
+    pos.push(x+l,y-l,z-l);
+    index.push(0,1,2);
+    index.push(1,3,2);
+    index.push(3,0,2);
+    index.push(1,3,0);
+    return [pos,index];
+}
 function circle (row){
   var pos = [],inx = [];
   var R =0.5,r = 0.2;

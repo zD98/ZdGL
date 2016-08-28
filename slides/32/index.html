@@ -58,15 +58,15 @@ var ctl = new Ctl({
     fragmentShader : 'fragmentShader'
 });
 var objs = [];
-for(var i =0;i<10;i++){
+for(var i =1;i<2;i++){
     objs.push(new Tetrahedron({
-        position:[i*2,Math.random()*10,0]
+        position:[i*2,i*3,0]
     }));
 }
 setTimeout(function(){
-for(var i =0;i<10;i++){
-    objs[i].setEnd([5,0,0],600);
-}
+    for(var i =0;i<1;i++){
+        objs[i].setEnd([5,5,0],60);
+    }
 },1000)
 ctl.setObjs(objs)
 ctl.render();

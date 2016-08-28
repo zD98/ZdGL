@@ -105,7 +105,7 @@ Matrix.rotate = function(mat, angle, axis){
 };
 Matrix.translate = function(mat, vec3){
   var dist = [];
-  for(let i = 0;i<16;i++){
+  for(var i = 0;i<16;i++){
     dist[i] = mat[i];
   }
   dist[3] =  vec3[0] + mat[12];

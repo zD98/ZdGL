@@ -20,10 +20,11 @@
   attribute vec4 vColor;
   uniform mat4 vpMatrix;
   uniform mat4 mMatrix;
+  uniform mat4 rMatrix;
   varying vec4 Color;
   void main(void) {
     Color = vColor;
-    gl_Position = vpMatrix*mMatrix*vec4(aVertexPosition,1.0);
+    gl_Position = vpMatrix*mMatrix*rMatrix*vec4(aVertexPosition,1.0);
   }
 
 </script>
@@ -58,13 +59,13 @@ var ctl = new Ctl({
     fragmentShader : 'fragmentShader'
 });
 var objs = [];
-for(var i =1;i<2;i++){
+for(var i =0;i<2;i++){
     objs.push(new Tetrahedron({
         position:[i*2,i*3,0]
     }));
 }
 setTimeout(function(){
-    for(var i =0;i<1;i++){
+    for(var i =0;i<2;i++){
         objs[i].setEnd([5,5,0],60);
     }
 },1000)

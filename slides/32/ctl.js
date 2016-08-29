@@ -123,6 +123,7 @@ Ctl.prototype.render = function (){
     gl.clearDepth(1.0);
     gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
     var mMatrixLocation = gl.getUniformLocation(this.program,"mMatrix");
+    var rMatrixLocation = gl.getUniformLocation(this.program,"rMatrix");
     var tempMatrix = [
             1,0,0,0,
             0,1,0,0,
@@ -133,9 +134,11 @@ Ctl.prototype.render = function (){
         
         // var mMatrix = Matrix.translate(tempMatrix,[0,i*3,0]);
         // mMatrix = Matrix.transform(mMatrix);
-        var mMatrix = objs[i].getMatrix();
-        mMatrix = Matrix.transform(mMatrix); 
+        var matrix = objs[i].getMatrix();
+        var mMatrix = Matrix.transform(matrix.mMatrix);
+        var rMatrix = matrix.rMatrix; 
         gl.uniformMatrix4fv(mMatrixLocation, false, mMatrix);
+        gl.uniformMatrix4fv(rMatrixLocation, false, rMatrix);
         gl.drawElements(gl.TRIANGLES,12,gl.UNSIGNED_SHORT,0);
     }
     // let mMatrix = Matrix.rotate(tempMatrix,0.5,[1,0,0]);

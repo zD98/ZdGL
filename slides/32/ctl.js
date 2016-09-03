@@ -42,7 +42,7 @@ Ctl.prototype._initGL = function(){
 }
 Ctl.prototype._initCamera = function (){
     var project = this._setPerspectiveProj(Math.PI/2,400,300,1,100);
-    var eye = new Vector(0,0,50);
+    var eye = new Vector(0,0,-50);
     var center = new Vector(0,0,0);
     var up = new Vector(0,1,0);
     var view = this._setCamera(eye, center, up);  

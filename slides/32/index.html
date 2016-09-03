@@ -58,19 +58,41 @@ var ctl = new Ctl({
     vertexShader : 'vertexShader',
     fragmentShader : 'fragmentShader'
 });
+var pos = [];
 var objs = [];
-for(var i =0;i<2;i++){
-    objs.push(new Tetrahedron({
-        position:[i*2,i*3,0]
-    }));
-}
-setTimeout(function(){
-    for(var i =0;i<2;i++){
-        objs[i].setEnd([5,5,0],60);
+var canvas = document.createElement('canvas');
+var ctx = canvas.getContext('2d');
+var img = new Image();
+img.src = './A.png';
+img.onload = function(){
+    var w = img.width,
+        h = img.height;
+    canvas.width = img.width;
+    canvas.height = img.height;
+    console.log('canvas ',canvas.width,canvas.height);
+    ctx.drawImage(this,0,0); 
+    var pixels = ctx.getImageData(0,0,7,7).data;
+    for(var i=0;i<h;i++){
+        for(var j =0;j<w;j++){
+            if(pixels[(j+7*i)*4+3]>0){
+                //读取图片 按照canvas坐标系计算，现转正常坐标系
+                pos.push({x:j,y:-i});
+            }
+        }
     }
-},1000)
-ctl.setObjs(objs)
-ctl.render();
+    for(var i =0;i<pos.length;i++){
+        objs.push(new Tetrahedron({
+            position:[pos[i].x*5,pos[i].y*5,0]
+        }));
+    }
+    setTimeout(function(){
+        for(var i =0;i<pos.length;i++){
+            objs[i].setEnd([pos[i].x*20*Math.random()-30,pos[i].y,0],2000);
+        }
+    },1000)
+    ctl.setObjs(objs)
+    ctl.render();
+}
 </script>
 
 </body>

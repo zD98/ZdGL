@@ -1,15 +1,14 @@
 function Tetrahedron(opt){
     this.end = [0,0,0];
     this.position = opt.position || [0,0,0];
-    console.log(this.position)
-    this.r = 0;
+    this.r = opt.r || 1;
     this.t = 0;
     this.durity = 1;
     this.v = [0,0,0];
     this.mMatrix = [
-            1,0,0,this.position[0],
-            0,1,0,this.position[1],
-            0,0,1,this.position[2],
+            this.r,0,0,this.position[0],
+            0,this.r,0,this.position[1],
+            0,0,this.r,this.position[2],
             0,0,0,1    
     ];
     this.rMatrix = [
@@ -18,8 +17,9 @@ function Tetrahedron(opt){
         0,0,1,0,
         0,0,0,1
     ]
-    // this.rMatrix = Matrix.rotate(this.rMatrix,(Math.PI/180)*(Math.random()+1),[Math.random(),Math.random(),Math.random()]);
-    this.rx = [Math.random(),Math.random(),Math.random()];
+    this.rMatrix = Matrix.rotate(this.rMatrix,-Math.atan(Math.SQRT2/2),[1,0,0]);
+    this.rMatrix = Matrix.rotate(this.rMatrix,-Math.atan(1),[0,0,1]);
+    // this.rx = [Math.random(),Math.random(),Math.random()];
 }
 Tetrahedron.prototype.setEnd = function(end,durity){
     this.end = end;
@@ -37,7 +37,7 @@ Tetrahedron.prototype.setVeloty = function(){
     this.v[2] = z * (1-(1-t)*(1-t));
 };
 Tetrahedron.prototype.getMatrix = function (){
-    this.rMatrix = Matrix.rotate(this.rMatrix,Math.PI/180,this.rx);
+    // this.rMatrix = Matrix.rotate(this.rMatrix,Math.PI/180,this.rx);
     var matrix = this.mMatrix;
     if(this.t<=this.durity){
         this.position[0] = this.position[0] + this.v[0];

@@ -41,12 +41,13 @@ Ctl.prototype._initGL = function(){
     gl.uniformMatrix4fv(VPMatrixLocation, 0, this.pvMatrix);
 }
 Ctl.prototype._initCamera = function (){
-    var project = this._setPerspectiveProj(Math.PI/2,400,300,1,100);
-    var eye = new Vector(0,0,-50);
+    var project = this._setPerspectiveProj(Math.PI/2,400,300,1,1000);
+    var eye = new Vector(0,0,-200);
     var center = new Vector(0,0,0);
     var up = new Vector(0,1,0);
     var view = this._setCamera(eye, center, up);  
     this.pvMatrix = Matrix.cross(project,view);
+    // this.pvMatrix = Matrix.transform(project);
 }
 Ctl.prototype._setPerspectiveProj = function(a,width,height,nZ,fZ){
         var matrix = [
@@ -60,8 +61,8 @@ Ctl.prototype._setPerspectiveProj = function(a,width,height,nZ,fZ){
         var b = (2*fZ*nZ)/(nZ-fZ);
         matrix[0] = 1/(tana*ar);
         matrix[5] = 1/tana;
-        matrix[10] = k;
-        matrix[11] = b;
+        // matrix[10] = k;
+        // matrix[11] = b;
         return  matrix;
 }
 Ctl.prototype._setCamera = function(eye, center, up){

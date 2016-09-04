@@ -82,14 +82,14 @@ img.onload = function(){
     }
     for(var i =0;i<pos.length;i++){
         objs.push(new Tetrahedron({
-            position:[pos[i].x*5,pos[i].y*5,0]
+            position:[pos[i].x*2,pos[i].y*2,0]
         }));
     }
-    setTimeout(function(){
+    /*setTimeout(function(){
         for(var i =0;i<pos.length;i++){
             objs[i].setEnd([pos[i].x*20*Math.random()-30,pos[i].y,0],2000);
         }
-    },1000)
+    },1000)*/
     ctl.setObjs(objs)
     ctl.render();
 }
